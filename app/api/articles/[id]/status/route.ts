@@ -17,12 +17,19 @@ export async function PATCH(
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Check user role
     const { data: profile } = await supabase
       .from("profiles")
       .select("role")
       .eq("id", user.id)
       .single();
+
+    // Only admins can change article status
+    if (profile?.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only admins can change article status" },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json();
     const { newStatus, note } = body;
@@ -34,22 +41,6 @@ export async function PATCH(
       .single();
 
     if (!article) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-    // Only reviewer/admin can publish
-    if (newStatus === "published" && profile?.role === "editor") {
-      return NextResponse.json(
-        { error: "Only reviewers and admins can publish articles" },
-        { status: 403 }
-      );
-    }
-
-    // Only reviewer/admin can mark as reviewed
-    if (newStatus === "reviewed" && profile?.role === "editor") {
-      return NextResponse.json(
-        { error: "Only reviewers and admins can review articles" },
-        { status: 403 }
-      );
-    }
 
     const allowed = VALID_TRANSITIONS[article.status];
     if (!allowed?.includes(newStatus)) {

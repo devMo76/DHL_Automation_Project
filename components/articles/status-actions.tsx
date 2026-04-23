@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Eye, RotateCcw, Loader2 } from "lucide-react";
+import { CheckCircle, Eye, RotateCcw, Loader2, ShieldAlert } from "lucide-react";
 
 interface StatusActionsProps {
   articleId: string;
@@ -28,7 +28,7 @@ const TRANSITIONS: Record<string, Array<{ to: string; label: string; icon: React
 export function StatusActions({ articleId, currentStatus, userRole }: StatusActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
-
+  const isAdmin = userRole === "admin";
   const actions = TRANSITIONS[currentStatus] || [];
 
   async function handleStatusChange(newStatus: string) {
@@ -55,22 +55,27 @@ export function StatusActions({ articleId, currentStatus, userRole }: StatusActi
 
   if (actions.length === 0) return null;
 
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-muted px-3 py-2 text-xs text-muted-foreground">
+        <ShieldAlert className="h-3.5 w-3.5 flex-shrink-0" />
+        Admin only: status changes
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2">
       {actions.map((action) => {
         const Icon = action.icon;
-        const needsPermission = action.to === "reviewed" || action.to === "published";
-        const canAct = !needsPermission || userRole === "reviewer" || userRole === "admin";
-
         return (
           <Button
             key={action.to}
             variant={action.color ? "default" : "outline"}
             size="sm"
             className={action.color}
-            disabled={!canAct || loading !== null}
+            disabled={loading !== null}
             onClick={() => handleStatusChange(action.to)}
-            title={!canAct ? "Only reviewers/admins can perform this action" : ""}
           >
             {loading === action.to ? (
               <Loader2 className="mr-2 h-3 w-3 animate-spin" />
