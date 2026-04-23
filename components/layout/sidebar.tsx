@@ -8,11 +8,19 @@ export function Sidebar() {
           <div className="h-8 w-8 rounded bg-[#FFCC00] flex items-center justify-center">
             <span className="text-xs font-black text-[#D40511]">DHL</span>
           </div>
-          <span className="font-semibold text-sm">Knowledge Base</span>
+          <div>
+            <span className="font-semibold text-sm block leading-tight">Knowledge Base</span>
+            <span className="text-[10px] text-muted-foreground leading-tight">Logistics Operations</span>
+          </div>
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
         <NavLinks />
+      </div>
+      <div className="border-t p-4">
+        <p className="text-[10px] text-muted-foreground text-center">
+          AI-Powered KB Automation v1.0
+        </p>
       </div>
     </aside>
   );
