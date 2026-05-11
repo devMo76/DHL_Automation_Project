@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
+  Bot,
   LayoutDashboard,
   Upload,
   FileText,
@@ -12,6 +13,7 @@ import {
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/upload", label: "Upload Console", icon: Upload },
+  { href: "/dashboard/rpa-results", label: "RPA Results", icon: Bot },
   { href: "/dashboard/articles", label: "Articles", icon: FileText },
 ];
 

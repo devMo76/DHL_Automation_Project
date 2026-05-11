@@ -7,13 +7,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/articles/status-badge";
 import {
   FileText,
   Upload,
   CheckCircle,
   AlertTriangle,
+  Bot,
   Database,
   Eye,
   ArrowRight,
@@ -206,7 +206,7 @@ export default async function DashboardPage() {
         <CardHeader>
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-3">
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link
             href="/dashboard/upload"
             className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
@@ -215,6 +215,16 @@ export default async function DashboardPage() {
             <div>
               <p className="font-medium text-sm">Upload Content</p>
               <p className="text-xs text-muted-foreground">PDF, DOCX, or text</p>
+            </div>
+          </Link>
+          <Link
+            href="/dashboard/rpa-results"
+            className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+          >
+            <Bot className="h-5 w-5 text-[#D40511]" />
+            <div>
+              <p className="font-medium text-sm">RPA Results</p>
+              <p className="text-xs text-muted-foreground">Review extractions</p>
             </div>
           </Link>
           <Link

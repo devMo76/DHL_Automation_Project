@@ -20,6 +20,13 @@ const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "text/plain",
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+  "image/gif",
+  "image/bmp",
 ];
 
 export default function UploadPage() {
@@ -33,7 +40,9 @@ export default function UploadPage() {
   function handleFileSelect(selected: File | null) {
     if (!selected) return;
     if (!ALLOWED_TYPES.includes(selected.type)) {
-      toast.error("Only PDF and DOCX files are supported");
+      toast.error(
+        "Only TXT, PDF, DOCX, PNG, JPG, JPEG, WEBP, GIF, and BMP files are supported",
+      );
       return;
     }
     if (selected.size > MAX_SIZE) {
@@ -128,7 +137,8 @@ export default function UploadPage() {
             <CardHeader>
               <CardTitle>Upload a Document</CardTitle>
               <CardDescription>
-                Supported formats: PDF, DOCX — Max 10 MB
+                Supported formats: TXT, PDF, DOCX, PNG, JPG, JPEG, WEBP, GIF,
+                BMP - Max 10 MB
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -149,7 +159,7 @@ export default function UploadPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".pdf,.docx"
+                  accept=".txt,.pdf,.docx,.png,.jpg,.jpeg,.webp,.gif,.bmp,image/*"
                   className="hidden"
                   onChange={(e) => handleFileSelect(e.target.files?.[0] ?? null)}
                 />
@@ -184,7 +194,8 @@ export default function UploadPage() {
                       Drag & drop a file here, or click to browse
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
-                      PDF or DOCX, up to 10 MB
+                      Supported files: TXT, PDF, DOCX, PNG, JPG, JPEG, WEBP,
+                      GIF, BMP
                     </p>
                   </>
                 )}

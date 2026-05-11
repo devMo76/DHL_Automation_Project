@@ -6,6 +6,9 @@ import { generateDraft } from "@/lib/ai/processor";
 import { checkDuplicate } from "@/lib/duplicate/checker";
 import type { FileType } from "@/types/database";
 
+export const runtime = "nodejs";
+export const maxDuration = 120;
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -26,17 +29,24 @@ export async function POST(request: Request) {
     let fileType: FileType;
     let originalName: string;
     let storagePath: string | null = null;
+    let documentUrl: string | null = null;
 
     if (inputType === "text") {
       if (!textInput || textInput.trim().length === 0) {
-        return NextResponse.json({ error: "Text input is empty" }, { status: 400 });
+        return NextResponse.json(
+          { error: "Text input is empty" },
+          { status: 400 },
+        );
       }
       extractedText = textInput;
       fileType = "text";
       originalName = "text-input";
     } else {
       if (!file) {
-        return NextResponse.json({ error: "No file provided" }, { status: 400 });
+        return NextResponse.json(
+          { error: "No file provided" },
+          { status: 400 },
+        );
       }
 
       const validation = validateFile(file);
@@ -57,21 +67,36 @@ export async function POST(request: Request) {
       if (uploadError) {
         return NextResponse.json(
           { error: `Storage upload failed: ${uploadError.message}` },
-          { status: 500 }
+          { status: 500 },
         );
       }
       storagePath = fileName;
 
+      const { data: publicUrlData } = supabase.storage
+        .from("uploads")
+        .getPublicUrl(fileName);
+
+      documentUrl = publicUrlData.publicUrl;
+
       // Extract text from file
       const arrayBuffer = await file.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
+      console.log("[process-upload] before extractText", {
+        fileType,
+        originalName,
+        size: file.size,
+      });
       extractedText = await extractText(buffer, fileType);
+      console.log("[process-upload] after extractText", {
+        fileType,
+        extractedChars: extractedText.length,
+      });
     }
 
     if (!extractedText || extractedText.trim().length === 0) {
       return NextResponse.json(
         { error: "Could not extract any text from the input" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -80,6 +105,7 @@ export async function POST(request: Request) {
       stage: "extraction",
       message: `Extracted ${extractedText.length} chars from ${fileType}`,
       level: "info",
+      document_storage_path: documentUrl,
     });
 
     // Normalize + hash
@@ -104,7 +130,7 @@ export async function POST(request: Request) {
     if (sourceError) {
       return NextResponse.json(
         { error: `Failed to save source document: ${sourceError.message}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -116,14 +142,14 @@ export async function POST(request: Request) {
       stage: "ai_processing",
       message: `Generated draft: "${draft.title}" with ${draft.steps.length} steps`,
       level: "info",
+      document_storage_path: documentUrl,
     });
-
     // Duplicate check
     const dupResult = await checkDuplicate(
       supabase,
       contentHash,
       draft.title,
-      draft.tags
+      draft.tags,
     );
 
     // Save knowledge article
@@ -136,8 +162,10 @@ export async function POST(request: Request) {
         creator_id: user.id,
         source_document_id: sourceDoc.id,
         current_version_number: 1,
-        duplicate_flag: dupResult.isDuplicate && dupResult.matchType === "exact",
-        conflict_flag: dupResult.isDuplicate && dupResult.matchType === "similar",
+        duplicate_flag:
+          dupResult.isDuplicate && dupResult.matchType === "exact",
+        conflict_flag:
+          dupResult.isDuplicate && dupResult.matchType === "similar",
       })
       .select()
       .single();
@@ -145,7 +173,7 @@ export async function POST(request: Request) {
     if (articleError) {
       return NextResponse.json(
         { error: `Failed to save article: ${articleError.message}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -208,6 +236,7 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("[process-upload] failed", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

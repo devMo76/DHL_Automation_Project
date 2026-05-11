@@ -1,6 +1,6 @@
 export type UserRole = "editor" | "reviewer" | "admin";
 export type ArticleStatus = "draft" | "reviewed" | "published";
-export type FileType = "text" | "pdf" | "docx";
+export type FileType = "text" | "pdf" | "docx" | "image";
 export type LogLevel = "info" | "warn" | "error";
 
 export interface Profile {
