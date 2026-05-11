@@ -257,3 +257,86 @@ export async function PATCH(
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+
+    const parsedId = articleIdSchema.safeParse(id);
+
+    if (!parsedId.success) {
+      return NextResponse.json(
+        { error: "Invalid article ID" },
+        { status: 400 },
+      );
+    }
+
+    const supabase = await createClient();
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json(
+        { error: "Unable to verify user role" },
+        { status: 403 },
+      );
+    }
+
+    if (profile.role !== "admin") {
+      return NextResponse.json(
+        { error: "Only admins can delete articles" },
+        { status: 403 },
+      );
+    }
+
+    const { data: existingArticle, error: findError } = await supabase
+      .from("knowledge_articles")
+      .select("id, title")
+      .eq("id", parsedId.data)
+      .single();
+
+    if (findError || !existingArticle) {
+      return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    }
+
+    const { error: deleteError } = await supabase
+      .from("knowledge_articles")
+      .delete()
+      .eq("id", parsedId.data);
+
+    if (deleteError) {
+      return NextResponse.json(
+        { error: "Failed to delete article", details: deleteError.message },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      message: "Article deleted successfully",
+      deletedArticle: existingArticle,
+    });
+  } catch (error) {
+    console.error("DELETE /api/articles/[id] error:", error);
+
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
