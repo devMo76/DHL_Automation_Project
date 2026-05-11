@@ -1,20 +1,37 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const VALID_STATUSES = ["draft", "reviewed", "published"];
+
 export async function GET(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
     const tag = searchParams.get("tag") || "";
+    const creatorId = searchParams.get("creatorId") || "";
+    const from = searchParams.get("from") || "";
+    const to = searchParams.get("to") || "";
+
+    if (status && status !== "all" && !VALID_STATUSES.includes(status)) {
+      return NextResponse.json({
+        error: "Invalid status filter",
+        status: 404,
+      });
+    }
 
     let query = supabase
       .from("knowledge_articles")
-      .select("*, article_tags(tag_name), profiles!knowledge_articles_creator_id_fkey(full_name)")
+      .select(
+        "*, article_tags(tag_name), profiles!knowledge_articles_creator_id_fkey(full_name)",
+      )
       .order("created_at", { ascending: false });
 
     if (status && status !== "all") {
@@ -23,6 +40,16 @@ export async function GET(request: Request) {
 
     if (search) {
       query = query.ilike("title", `%${search}%`);
+    }
+    if (creatorId) {
+      query = query.eq("creator_id", creatorId);
+    }
+    if (from) {
+      query = query.gte("created_at", from);
+    }
+
+    if (to) {
+      query = query.lte("created_at", `${to}T23:59:59.999Z`);
     }
 
     const { data: articles, error } = await query;
@@ -35,7 +62,9 @@ export async function GET(request: Request) {
     if (tag) {
       filtered = filtered.filter((a: Record<string, unknown>) => {
         const tags = a.article_tags as Array<{ tag_name: string }>;
-        return tags?.some((t) => t.tag_name.toLowerCase() === tag.toLowerCase());
+        return tags?.some(
+          (t) => t.tag_name.toLowerCase() === tag.toLowerCase(),
+        );
       });
     }
 
