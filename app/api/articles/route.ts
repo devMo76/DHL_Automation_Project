@@ -1,7 +1,36 @@
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const VALID_STATUSES = ["draft", "reviewed", "published"];
+const articleFiltersSchema = z.object({
+  search: z.string().trim().max(100).default(""),
+  status: z.enum(["draft", "reviewed", "published", "all", ""]).default(""),
+  tag: z.string().trim().max(50).default(""),
+  creatorId: z
+    .string()
+    .trim()
+    .default("")
+    .refine(
+      (value) => value === "" || z.string().uuid().safeParse(value).success,
+      "Invalid creator ID",
+    ),
+  from: z
+    .string()
+    .trim()
+    .default("")
+    .refine(
+      (value) => value === "" || !Number.isNaN(Date.parse(value)),
+      "Invalid from date",
+    ),
+  to: z
+    .string()
+    .trim()
+    .default("")
+    .refine(
+      (value) => value === "" || !Number.isNaN(Date.parse(value)),
+      "Invalid to date",
+    ),
+});
 
 export async function GET(request: Request) {
   try {
@@ -13,19 +42,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
-    const search = searchParams.get("search") || "";
-    const status = searchParams.get("status") || "";
-    const tag = searchParams.get("tag") || "";
-    const creatorId = searchParams.get("creatorId") || "";
-    const from = searchParams.get("from") || "";
-    const to = searchParams.get("to") || "";
+    const filterResult = articleFiltersSchema.safeParse({
+      search: searchParams.get("search") || "",
+      status: searchParams.get("status") || "",
+      tag: searchParams.get("tag") || "",
+      creatorId: searchParams.get("creatorId") || "",
+      from: searchParams.get("from") || "",
+      to: searchParams.get("to") || "",
+    });
 
-    if (status && status !== "all" && !VALID_STATUSES.includes(status)) {
-      return NextResponse.json({
-        error: "Invalid status filter",
-        status: 404,
-      });
+    if (!filterResult.success) {
+      return NextResponse.json(
+        {
+          error: "Invalid article filters",
+          details: filterResult.error.flatten().fieldErrors,
+        },
+        { status: 400 },
+      );
     }
+
+    const { search, status, tag, creatorId, from, to } = filterResult.data;
 
     let query = supabase
       .from("knowledge_articles")
