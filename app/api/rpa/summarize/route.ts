@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
@@ -11,6 +12,10 @@ const serviceSupabase = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
+
+const summarizeRequestSchema = z.object({
+  id: z.string().uuid(),
+});
 
 export async function POST(req: Request) {
   try {
@@ -37,14 +42,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const { id } = await req.json();
+    let body: unknown;
 
-    if (!id) {
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const parsedBody = summarizeRequestSchema.safeParse(body);
+
+    if (!parsedBody.success) {
       return NextResponse.json(
-        { error: "Missing document id" },
+        {
+          error: "Invalid request body",
+          details: parsedBody.error.flatten(),
+        },
         { status: 400 },
       );
     }
+
+    const { id } = parsedBody.data;
 
     const { data: document, error: fetchError } = await serviceSupabase
       .from("rpa_extracted_documents")

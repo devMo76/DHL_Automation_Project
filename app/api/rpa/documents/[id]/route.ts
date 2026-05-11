@@ -1,23 +1,27 @@
+import { z } from "zod";
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-const UUID_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const documentIdSchema = z.string().uuid();
 
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
+    const { id: rawId } = await params;
 
-    if (!UUID_PATTERN.test(id)) {
+    const idResult = documentIdSchema.safeParse(rawId);
+
+    if (!idResult.success) {
       return NextResponse.json(
         { error: "Invalid document id" },
         { status: 400 },
       );
     }
+
+    const id = idResult.data;
 
     const authSupabase = await createClient();
 
