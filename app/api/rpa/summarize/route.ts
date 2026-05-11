@@ -1,18 +1,42 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient as createServerClient } from "@/lib/supabase/server";
 
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY,
 });
 
-const supabase = createClient(
+const serviceSupabase = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(req: Request) {
   try {
+    const authSupabase = await createServerClient();
+
+    const {
+      data: { user },
+    } = await authSupabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await authSupabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || profile?.role !== "admin") {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
     const { id } = await req.json();
 
     if (!id) {
@@ -22,7 +46,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { data: document, error: fetchError } = await supabase
+    const { data: document, error: fetchError } = await serviceSupabase
       .from("rpa_extracted_documents")
       .select("id, file_name, extracted_text, extraction_status")
       .eq("id", id)
@@ -38,6 +62,16 @@ export async function POST(req: Request) {
     if (document.extraction_status !== "success") {
       return NextResponse.json(
         { error: "Cannot summarize failed extraction" },
+        { status: 400 },
+      );
+    }
+
+    if (
+      !document.extracted_text ||
+      document.extracted_text.trim().length === 0
+    ) {
+      return NextResponse.json(
+        { error: "No extracted text found" },
         { status: 400 },
       );
     }
@@ -69,7 +103,7 @@ ${document.extracted_text}
 
     const summary = response.text || "";
 
-    const { error: updateError } = await supabase
+    const { error: updateError } = await serviceSupabase
       .from("rpa_extracted_documents")
       .update({
         ai_summary: summary,
@@ -87,6 +121,7 @@ ${document.extracted_text}
       summary,
     });
   } catch (error) {
+    console.error("RPA SUMMARIZE ERROR:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },

@@ -1,33 +1,63 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import {
-  Bot,
-  LayoutDashboard,
-  Upload,
-  FileText,
-} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { Bot, LayoutDashboard, Upload, FileText } from "lucide-react";
 
 const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/dashboard/upload", label: "Upload Console", icon: Upload },
-  { href: "/dashboard/rpa-results", label: "RPA Results", icon: Bot },
+  {
+    href: "/dashboard/rpa-results",
+    label: "RPA Results",
+    icon: Bot,
+    adminOnly: true,
+  },
   { href: "/dashboard/articles", label: "Articles", icon: FileText },
 ];
 
 export function NavLinks() {
   const pathname = usePathname();
+  const supabase = useMemo(() => createClient(), []);
+  const [role, setRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+      setRole(profile?.role ?? null);
+    }
+
+    void loadRole();
+  }, [supabase]);
+
+  const visibleLinks = links.filter((link) => {
+    if (link.adminOnly && role !== "admin") return false;
+    return true;
+  });
 
   return (
     <nav className="flex flex-col gap-1">
-      {links.map((link) => {
+      {visibleLinks.map((link) => {
         const Icon = link.icon;
         const isActive =
           link.href === "/dashboard"
             ? pathname === "/dashboard"
             : pathname.startsWith(link.href);
+
         return (
           <Link
             key={link.href}
@@ -36,7 +66,7 @@ export function NavLinks() {
               "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
               isActive
                 ? "bg-primary text-primary-foreground"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <Icon className="h-4 w-4" />

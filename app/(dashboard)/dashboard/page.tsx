@@ -24,6 +24,20 @@ import { Button } from "@/components/ui/button";
 export default async function DashboardPage() {
   const supabase = await createClient();
 
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    isAdmin = profile?.role === "admin";
+  }
+
   const [
     { count: totalCount },
     { count: draftCount },
@@ -69,12 +83,42 @@ export default async function DashboardPage() {
   ]);
 
   const stats = [
-    { title: "Total Articles", value: totalCount ?? 0, icon: Database, color: "text-foreground" },
-    { title: "Drafts", value: draftCount ?? 0, icon: FileText, color: "text-orange-500" },
-    { title: "Reviewed", value: reviewedCount ?? 0, icon: Eye, color: "text-blue-500" },
-    { title: "Published", value: publishedCount ?? 0, icon: CheckCircle, color: "text-green-500" },
-    { title: "Duplicates", value: duplicateCount ?? 0, icon: AlertTriangle, color: "text-red-500" },
-    { title: "Sources Processed", value: sourceCount ?? 0, icon: Upload, color: "text-violet-500" },
+    {
+      title: "Total Articles",
+      value: totalCount ?? 0,
+      icon: Database,
+      color: "text-foreground",
+    },
+    {
+      title: "Drafts",
+      value: draftCount ?? 0,
+      icon: FileText,
+      color: "text-orange-500",
+    },
+    {
+      title: "Reviewed",
+      value: reviewedCount ?? 0,
+      icon: Eye,
+      color: "text-blue-500",
+    },
+    {
+      title: "Published",
+      value: publishedCount ?? 0,
+      icon: CheckCircle,
+      color: "text-green-500",
+    },
+    {
+      title: "Duplicates",
+      value: duplicateCount ?? 0,
+      icon: AlertTriangle,
+      color: "text-red-500",
+    },
+    {
+      title: "Sources Processed",
+      value: sourceCount ?? 0,
+      icon: Upload,
+      color: "text-violet-500",
+    },
   ];
 
   return (
@@ -119,7 +163,9 @@ export default async function DashboardPage() {
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle>Recent Articles</CardTitle>
-              <CardDescription>Latest knowledge articles created</CardDescription>
+              <CardDescription>
+                Latest knowledge articles created
+              </CardDescription>
             </div>
             <Link href="/dashboard/articles">
               <Button variant="ghost" size="sm" className="text-xs">
@@ -160,13 +206,17 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest status changes across all articles</CardDescription>
+            <CardDescription>
+              Latest status changes across all articles
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {recentStatus && recentStatus.length > 0 ? (
               <div className="space-y-3">
                 {recentStatus.map((entry: Record<string, unknown>) => {
-                  const profiles = entry.profiles as { full_name: string } | null;
+                  const profiles = entry.profiles as {
+                    full_name: string;
+                  } | null;
                   return (
                     <div
                       key={entry.id as string}
@@ -177,7 +227,9 @@ export default async function DashboardPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           {entry.old_status ? (
                             <>
-                              <StatusBadge status={entry.old_status as string} />
+                              <StatusBadge
+                                status={entry.old_status as string}
+                              />
                               <ArrowRight className="h-3 w-3 text-muted-foreground" />
                             </>
                           ) : null}
@@ -185,7 +237,9 @@ export default async function DashboardPage() {
                         </div>
                         <p className="text-xs text-muted-foreground mt-1">
                           {profiles?.full_name || "Unknown"} ·{" "}
-                          {new Date(entry.changed_at as string).toLocaleString()}
+                          {new Date(
+                            entry.changed_at as string,
+                          ).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -214,19 +268,25 @@ export default async function DashboardPage() {
             <Upload className="h-5 w-5 text-[#D40511]" />
             <div>
               <p className="font-medium text-sm">Upload Content</p>
-              <p className="text-xs text-muted-foreground">PDF, DOCX, or text</p>
+              <p className="text-xs text-muted-foreground">
+                PDF, DOCX, or text
+              </p>
             </div>
           </Link>
-          <Link
-            href="/dashboard/rpa-results"
-            className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
-          >
-            <Bot className="h-5 w-5 text-[#D40511]" />
-            <div>
-              <p className="font-medium text-sm">RPA Results</p>
-              <p className="text-xs text-muted-foreground">Review extractions</p>
-            </div>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/dashboard/rpa-results"
+              className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+            >
+              <Bot className="h-5 w-5 text-[#D40511]" />
+              <div>
+                <p className="font-medium text-sm">RPA Results</p>
+                <p className="text-xs text-muted-foreground">
+                  Review extractions
+                </p>
+              </div>
+            </Link>
+          )}
           <Link
             href="/dashboard/articles"
             className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
@@ -237,16 +297,18 @@ export default async function DashboardPage() {
               <p className="text-xs text-muted-foreground">Search and manage</p>
             </div>
           </Link>
-          <Link
-            href="/dashboard/articles?status=draft"
-            className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
-          >
-            <Eye className="h-5 w-5 text-[#D40511]" />
-            <div>
-              <p className="font-medium text-sm">Review Drafts</p>
-              <p className="text-xs text-muted-foreground">Pending review</p>
-            </div>
-          </Link>
+          {isAdmin && (
+            <Link
+              href="/dashboard/articles?status=draft"
+              className="flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted"
+            >
+              <Eye className="h-5 w-5 text-[#D40511]" />
+              <div>
+                <p className="font-medium text-sm">Review Drafts</p>
+                <p className="text-xs text-muted-foreground">Pending review</p>
+              </div>
+            </Link>
+          )}
         </CardContent>
       </Card>
     </div>

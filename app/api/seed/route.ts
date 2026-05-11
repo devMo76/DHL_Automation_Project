@@ -4,7 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 const DEMO_ARTICLES = [
   {
     title: "Parcel Sorting Procedure at Central Hub",
-    summary: "Standard operating procedure for sorting incoming parcels at DHL central sorting facilities. Covers scanning, zone classification, and loading protocols.",
+    summary:
+      "Standard operating procedure for sorting incoming parcels at DHL central sorting facilities. Covers scanning, zone classification, and loading protocols.",
     steps: [
       "Receive incoming parcels from unloading dock",
       "Scan each parcel barcode using handheld scanner",
@@ -19,7 +20,8 @@ const DEMO_ARTICLES = [
   },
   {
     title: "Customs Documentation for International Shipments",
-    summary: "Guide for preparing and verifying customs documentation for cross-border DHL Express shipments. Includes required forms and common rejection reasons.",
+    summary:
+      "Guide for preparing and verifying customs documentation for cross-border DHL Express shipments. Includes required forms and common rejection reasons.",
     steps: [
       "Verify shipper has completed commercial invoice",
       "Check HS code classification against product description",
@@ -34,7 +36,8 @@ const DEMO_ARTICLES = [
   },
   {
     title: "Damaged Parcel Handling Protocol",
-    summary: "Steps for handling parcels that arrive damaged at any DHL facility. Includes photo documentation, reporting, and customer notification procedures.",
+    summary:
+      "Steps for handling parcels that arrive damaged at any DHL facility. Includes photo documentation, reporting, and customer notification procedures.",
     steps: [
       "Isolate damaged parcel from regular flow",
       "Photograph damage from three angles minimum",
@@ -50,7 +53,8 @@ const DEMO_ARTICLES = [
   },
   {
     title: "Vehicle Loading Optimization Guide",
-    summary: "Best practices for loading delivery vehicles to maximize capacity utilization and ensure safe transport of parcels during last-mile delivery.",
+    summary:
+      "Best practices for loading delivery vehicles to maximize capacity utilization and ensure safe transport of parcels during last-mile delivery.",
     steps: [
       "Review route manifest and total parcel count",
       "Sort parcels by delivery sequence (last stop loaded first)",
@@ -66,7 +70,8 @@ const DEMO_ARTICLES = [
   },
   {
     title: "Returns Processing Workflow",
-    summary: "End-to-end process for handling returned shipments including receiving, inspection, restocking decisions, and customer refund triggers.",
+    summary:
+      "End-to-end process for handling returned shipments including receiving, inspection, restocking decisions, and customer refund triggers.",
     steps: [
       "Scan return label at receiving dock",
       "Match return to original shipment record",
@@ -84,8 +89,24 @@ const DEMO_ARTICLES = [
 export async function POST() {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user)
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { data: profile, error: profileError } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError || profile?.role !== "admin") {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
 
     const created: string[] = [];
 
@@ -111,14 +132,14 @@ export async function POST() {
           article_id: article.id,
           step_number: i + 1,
           step_text: text,
-        }))
+        })),
       );
 
       await supabase.from("article_tags").insert(
         demo.tags.map((tag) => ({
           article_id: article.id,
           tag_name: tag,
-        }))
+        })),
       );
 
       await supabase.from("article_versions").insert({
@@ -129,7 +150,12 @@ export async function POST() {
         status_at_that_time: demo.status,
         edited_by: user.id,
         change_note: "Demo seed data",
-        snapshot_json: { title: demo.title, summary: demo.summary, steps: demo.steps, tags: demo.tags },
+        snapshot_json: {
+          title: demo.title,
+          summary: demo.summary,
+          steps: demo.steps,
+          tags: demo.tags,
+        },
       });
 
       await supabase.from("status_history").insert({
