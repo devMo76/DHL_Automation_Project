@@ -38,6 +38,9 @@ export default function ArticlesPage() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [tagFilter, setTagFilter] = useState("");
+  const [creatorIdFilter, setCreatorIdFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [allTags, setAllTags] = useState<string[]>([]);
 
   const fetchArticles = useCallback(async () => {
@@ -46,6 +49,9 @@ export default function ArticlesPage() {
     if (search) params.set("search", search);
     if (statusFilter !== "all") params.set("status", statusFilter);
     if (tagFilter) params.set("tag", tagFilter);
+    if (creatorIdFilter) params.set("creatorId", creatorIdFilter);
+    if (fromDate) params.set("from", fromDate);
+    if (toDate) params.set("to", toDate);
 
     try {
       const res = await fetch(`/api/articles?${params.toString()}`);
@@ -63,7 +69,7 @@ export default function ArticlesPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, tagFilter]);
+  }, [search, statusFilter, tagFilter, creatorIdFilter, fromDate, toDate]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -114,6 +120,53 @@ export default function ArticlesPage() {
                   {s}
                 </Button>
               ))}
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="space-y-1">
+              <label
+                htmlFor="creator-filter"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                Creator ID
+              </label>
+              <Input
+                id="creator-filter"
+                placeholder="Filter by creator UUID"
+                value={creatorIdFilter}
+                onChange={(e) => setCreatorIdFilter(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="from-date-filter"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                From Date
+              </label>
+              <Input
+                id="from-date-filter"
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label
+                htmlFor="to-date-filter"
+                className="text-xs font-medium text-muted-foreground"
+              >
+                To Date
+              </label>
+              <Input
+                id="to-date-filter"
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+              />
             </div>
           </div>
 
