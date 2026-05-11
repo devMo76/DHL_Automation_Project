@@ -10,6 +10,7 @@ import {
   Loader2,
   RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 
 type RpaDocument = {
@@ -103,6 +112,9 @@ export default function RpaResultsClient() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [summarizingId, setSummarizingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDeleteDoc, setPendingDeleteDoc] =
+    useState<RpaDocument | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const successfulCount = documents.filter(
@@ -192,6 +204,33 @@ export default function RpaResultsClient() {
       toast.error(err instanceof Error ? err.message : "Summary failed");
     } finally {
       setSummarizingId(null);
+    }
+  }
+
+  async function confirmDeleteDocument() {
+    if (!pendingDeleteDoc) return;
+
+    const id = pendingDeleteDoc.id;
+    setDeletingId(id);
+
+    try {
+      const res = await fetch(`/api/rpa/documents/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Delete failed");
+      }
+
+      setDocuments((current) => current.filter((doc) => doc.id !== id));
+      setPendingDeleteDoc(null);
+      toast.success("Extracted document deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Delete failed");
+    } finally {
+      setDeletingId(null);
     }
   }
 
@@ -366,7 +405,7 @@ export default function RpaResultsClient() {
                   {doc.extraction_status === "success" && (
                     <Button
                       onClick={() => generateSummary(doc.id)}
-                      disabled={summarizingId === doc.id}
+                      disabled={summarizingId === doc.id || deletingId === doc.id}
                       className="bg-[#D40511] text-white hover:bg-[#b5040e]"
                     >
                       {summarizingId === doc.id ? (
@@ -381,6 +420,20 @@ export default function RpaResultsClient() {
                           : "Generate Summary"}
                     </Button>
                   )}
+
+                  <Button
+                    variant="destructive"
+                    onClick={() => setPendingDeleteDoc(doc)}
+                    disabled={deletingId !== null || summarizingId === doc.id}
+                    aria-label={`Delete ${doc.file_name || "extracted document"}`}
+                  >
+                    {deletingId === doc.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-4 w-4" />
+                    )}
+                    Delete
+                  </Button>
                 </CardAction>
               </CardHeader>
 
@@ -414,6 +467,60 @@ export default function RpaResultsClient() {
           ))}
         </div>
       )}
+
+      <Dialog
+        open={pendingDeleteDoc !== null}
+        onOpenChange={(open) => {
+          if (!open && !deletingId) {
+            setPendingDeleteDoc(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!deletingId}>
+          <DialogHeader className="gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-destructive/10 text-destructive ring-1 ring-destructive/20">
+              <Trash2 className="h-5 w-5" />
+            </div>
+            <div className="space-y-2">
+              <DialogTitle>Delete extracted document?</DialogTitle>
+              <DialogDescription>
+                This will permanently remove{" "}
+                <span className="font-medium text-foreground">
+                  {pendingDeleteDoc?.file_name || "this extracted document"}
+                </span>{" "}
+                from your RPA results.
+              </DialogDescription>
+            </div>
+          </DialogHeader>
+
+          <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+            This action only clears the selected extraction record from this
+            dashboard view and cannot be undone.
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPendingDeleteDoc(null)}
+              disabled={deletingId !== null}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteDocument}
+              disabled={deletingId !== null}
+            >
+              {deletingId ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="h-4 w-4" />
+              )}
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
