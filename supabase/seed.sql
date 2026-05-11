@@ -56,7 +56,7 @@ VALUES (
   '00000000-0000-0000-0000-000000000003',
   'DHL Shipment Issue Handling Procedure',
   'This article explains the basic steps for handling shipment-related issues in DHL logistics operations.',
-  'Draft',
+  'draft',
   '00000000-0000-0000-0000-000000000001',
   '00000000-0000-0000-0000-000000000002',
   1,

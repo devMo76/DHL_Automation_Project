@@ -145,12 +145,7 @@ export async function POST(request: Request) {
       document_storage_path: documentUrl,
     });
     // Duplicate check
-    const dupResult = await checkDuplicate(
-      supabase,
-      contentHash,
-      draft.title,
-      draft.tags,
-    );
+    const dupResult = await checkDuplicate(supabase, contentHash, draft.title);
 
     // Save knowledge article
     const { data: article, error: articleError } = await supabase

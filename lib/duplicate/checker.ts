@@ -11,18 +11,22 @@ export async function checkDuplicate(
   supabase: SupabaseClient,
   contentHash: string,
   title: string,
-  tags: string[]
 ): Promise<DuplicateResult> {
   // 1. Exact match by content hash
   const { data: exactMatch } = await supabase
     .from("source_documents")
-    .select("id, knowledge_articles!knowledge_articles_source_document_id_fkey(id, title)")
+    .select(
+      "id, knowledge_articles!knowledge_articles_source_document_id_fkey(id, title)",
+    )
     .eq("content_hash", contentHash)
     .limit(1)
     .single();
 
   if (exactMatch) {
-    const articles = exactMatch.knowledge_articles as unknown as Array<{ id: string; title: string }>;
+    const articles = exactMatch.knowledge_articles as unknown as Array<{
+      id: string;
+      title: string;
+    }>;
     if (articles && articles.length > 0) {
       return {
         isDuplicate: true,

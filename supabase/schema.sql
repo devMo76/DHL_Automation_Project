@@ -58,6 +58,40 @@ CREATE TABLE public.processing_logs (
   CONSTRAINT processing_logs_pkey PRIMARY KEY (id),
   CONSTRAINT processing_logs_source_document_id_fkey FOREIGN KEY (source_document_id) REFERENCES public.source_documents(id)
 );
+-- RPA extracted documents table
+CREATE TABLE IF NOT EXISTS public.rpa_extracted_documents (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  processing_log_id uuid REFERENCES public.processing_logs(id) ON DELETE CASCADE,
+
+  document_url text NOT NULL,
+  file_name text,
+  file_type text,
+
+  extracted_text text,
+  extraction_status text DEFAULT 'success',
+  error_message text,
+
+  ai_summary text,
+  ai_key_points jsonb,
+  ai_summary_status text DEFAULT 'pending',
+  summarized_at timestamptz,
+
+  extracted_at timestamptz DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_rpa_extracted_documents_processing_log_id
+ON public.rpa_extracted_documents(processing_log_id);
+
+CREATE INDEX IF NOT EXISTS idx_rpa_extracted_documents_document_url
+ON public.rpa_extracted_documents(document_url);
+
+CREATE INDEX IF NOT EXISTS idx_rpa_extracted_documents_extraction_status
+ON public.rpa_extracted_documents(extraction_status);
+
+CREATE INDEX IF NOT EXISTS idx_rpa_extracted_documents_ai_summary_status
+ON public.rpa_extracted_documents(ai_summary_status);
+
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
   full_name text NOT NULL,
@@ -100,4 +134,50 @@ CREATE TABLE public.status_history (
   CONSTRAINT status_history_pkey PRIMARY KEY (id),
   CONSTRAINT status_history_article_id_fkey FOREIGN KEY (article_id) REFERENCES public.knowledge_articles(id),
   CONSTRAINT status_history_changed_by_fkey FOREIGN KEY (changed_by) REFERENCES public.profiles(id)
+);
+
+-- =========================================================
+-- RLS for RPA extracted documents
+-- =========================================================
+
+ALTER TABLE public.rpa_extracted_documents ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Admins can read RPA extracted documents"
+ON public.rpa_extracted_documents;
+
+DROP POLICY IF EXISTS "Admins can update RPA extracted documents"
+ON public.rpa_extracted_documents;
+
+CREATE POLICY "Admins can read RPA extracted documents"
+ON public.rpa_extracted_documents
+FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can update RPA extracted documents"
+ON public.rpa_extracted_documents
+FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1
+    FROM public.profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
 );

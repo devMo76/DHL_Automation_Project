@@ -4,12 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -20,13 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/articles/status-badge";
-import {
-  Search,
-  FileText,
-  AlertTriangle,
-  Copy,
-  Loader2,
-} from "lucide-react";
+import { Search, FileText, AlertTriangle, Copy, Loader2 } from "lucide-react";
 
 interface ArticleRow {
   id: string;
@@ -65,7 +54,7 @@ export default function ArticlesPage() {
         setArticles(data);
         const tags = new Set<string>();
         data.forEach((a: ArticleRow) =>
-          a.article_tags?.forEach((t) => tags.add(t.tag_name))
+          a.article_tags?.forEach((t) => tags.add(t.tag_name)),
         );
         setAllTags(Array.from(tags).sort());
       }
@@ -77,7 +66,11 @@ export default function ArticlesPage() {
   }, [search, statusFilter, tagFilter]);
 
   useEffect(() => {
-    fetchArticles();
+    const timer = window.setTimeout(() => {
+      void fetchArticles();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [fetchArticles]);
 
   // Debounced search
@@ -126,7 +119,9 @@ export default function ArticlesPage() {
 
           {allTags.length > 0 && (
             <div className="mt-4 flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground font-medium">Tags:</span>
+              <span className="text-xs text-muted-foreground font-medium">
+                Tags:
+              </span>
               <Badge
                 variant={tagFilter === "" ? "default" : "outline"}
                 className="cursor-pointer text-xs"
@@ -155,7 +150,10 @@ export default function ArticlesPage() {
           <CardTitle className="flex items-center justify-between">
             <span>Articles ({articles.length})</span>
             <Link href="/dashboard/upload">
-              <Button size="sm" className="bg-[#D40511] hover:bg-[#b5040e] text-white">
+              <Button
+                size="sm"
+                className="bg-[#D40511] hover:bg-[#b5040e] text-white"
+              >
                 <FileText className="mr-2 h-3 w-3" /> New Article
               </Button>
             </Link>
@@ -177,16 +175,27 @@ export default function ArticlesPage() {
                   <TableRow>
                     <TableHead>Title</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead className="hidden sm:table-cell">Creator</TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Creator
+                    </TableHead>
                     <TableHead className="hidden md:table-cell">Tags</TableHead>
-                    <TableHead className="hidden md:table-cell">Version</TableHead>
-                    <TableHead className="hidden lg:table-cell">Flags</TableHead>
-                    <TableHead className="hidden sm:table-cell">Updated</TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      Version
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      Flags
+                    </TableHead>
+                    <TableHead className="hidden sm:table-cell">
+                      Updated
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {articles.map((article) => (
-                    <TableRow key={article.id} className="cursor-pointer hover:bg-muted/50">
+                    <TableRow
+                      key={article.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
                       <TableCell>
                         <Link
                           href={`/dashboard/articles/${article.id}`}
@@ -204,7 +213,11 @@ export default function ArticlesPage() {
                       <TableCell className="hidden md:table-cell">
                         <div className="flex gap-1 flex-wrap">
                           {article.article_tags?.slice(0, 3).map((t) => (
-                            <Badge key={t.tag_name} variant="secondary" className="text-xs">
+                            <Badge
+                              key={t.tag_name}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {t.tag_name}
                             </Badge>
                           ))}

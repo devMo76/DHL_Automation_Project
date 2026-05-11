@@ -88,6 +88,13 @@ const DEMO_ARTICLES = [
 
 export async function POST() {
   try {
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json(
+        { error: "Seed route is disabled in production" },
+        { status: 403 },
+      );
+    }
+
     const supabase = await createClient();
     const {
       data: { user },
