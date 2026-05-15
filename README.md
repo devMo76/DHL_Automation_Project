@@ -394,61 +394,231 @@ Notes:
 
 ## How to Run the Project Locally
 
-### 1. Install dependencies
+### Prerequisites
+
+Before you begin, ensure you have the following installed on your system:
+
+- **Node.js 18 or higher** (download from [nodejs.org](https://nodejs.org))
+- **npm** (comes with Node.js)
+- **Git** (download from [git-scm.com](https://git-scm.com))
+- A **Supabase account** (free tier available at [supabase.com](https://supabase.com))
+- A **Google Gemini API key** (free tier available at [aistudio.google.com](https://aistudio.google.com))
+- *(Optional)* An **OpenAI API key** for fallback AI support
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/devMo76/DHL_Automation_Project.git
+cd DHL_Automation_Project
+```
+
+If you want to use a specific branch or checkpoint:
+
+```bash
+git checkout checkpoint/bf7cdf4
+```
+
+### Step 2: Install Dependencies
 
 ```bash
 npm install
 ```
 
-### 2. Configure environment variables
+This will install all required packages including Next.js, React, TypeScript, Supabase client, file parsers, and UI components.
 
-Copy `.env.example` to `.env.local` and replace placeholder values with your own Supabase and AI API keys.
+### Step 3: Set Up Supabase Backend
 
-### 3. Set up Supabase
+#### 3.1 Create a Supabase Project
 
-1. Create a Supabase project.
-2. Open the Supabase SQL Editor.
-3. Run `supabase/schema.sql`.
-4. Run `supabase/policies.sql`.
-5. Optionally run `supabase/seed.sql` for demo data.
+1. Visit [supabase.com](https://supabase.com) and sign up or log in
+2. Click **New Project** and fill in the project details:
+   - Project name: `DHL-Automation` (or your preferred name)
+   - Database password: Create a strong password and save it
+   - Region: Select a region closest to you
+3. Wait for the project to initialize (this may take a few minutes)
 
-### 4. Create the storage bucket
+#### 3.2 Retrieve API Keys
 
-In Supabase Storage, create a bucket named:
+1. In the Supabase dashboard, go to **Settings** → **API**
+2. Copy the following values:
+   - **Project URL** → Use as `NEXT_PUBLIC_SUPABASE_URL`
+   - **anon (public) key** → Use as `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - **service_role key** → Use as `SUPABASE_SERVICE_ROLE_KEY` (keep this private!)
 
-```text
-uploads
+#### 3.3 Set Up Database Schema
+
+1. In Supabase dashboard, navigate to **SQL Editor**
+2. Click **New query**
+3. Copy the entire contents of `supabase/schema.sql` from this repository into the query editor
+4. Click **Run** to execute
+5. Wait for the schema to be created successfully
+6. Create a new query again and paste the contents of `supabase/policies.sql`
+7. Click **Run** to apply Row Level Security policies
+8. *(Optional)* For demo/test data, run `supabase/seed.sql` in the same manner
+
+#### 3.4 Create Storage Bucket
+
+1. In Supabase dashboard, go to **Storage**
+2. Click **Create Bucket** or **New Bucket**
+3. Name it exactly: `uploads`
+4. Uncheck "Make it private" to allow public access (or configure policies as needed)
+5. Click **Create**
+
+### Step 4: Configure API Keys
+
+#### 4.1 Get Google Gemini API Key (Required)
+
+1. Visit [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click **Create API Key**
+4. Select your project or create a new one
+5. Copy the generated API key
+6. Save it for the environment setup
+
+#### 4.2 Get OpenAI API Key (Optional)
+
+1. Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+2. Sign in or create an account
+3. Navigate to **API Keys** section
+4. Click **Create new secret key**
+5. Copy the key (it will only be shown once)
+6. Save it for the environment setup (optional, used as fallback only)
+
+### Step 5: Create Environment Configuration File
+
+1. In the project root directory, create a new file named `.env.local`
+2. Copy the contents of `.env.example` into `.env.local`:
+
+```bash
+cp .env.example .env.local
 ```
 
-The application uploads source documents to this bucket.
+3. Open `.env.local` and fill in your actual values:
 
-### 5. Create test users
+```env
+# Supabase Configuration (from Step 3.2)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-Create users in Supabase Authentication, then update their rows in the `profiles` table with suitable roles such as `editor` or `admin`.
+# Supabase Service Role (KEEP SECRET - Server-only)
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 
-### 6. Start the development server
+# AI API Keys
+GEMINI_API_KEY=AIzaSyD...
+OPENAI_API_KEY=sk-... # Optional
+
+# App Configuration
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+```
+
+**⚠️ Important Security Notes:**
+- Never commit `.env.local` to Git (it's in `.gitignore`)
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` in frontend code or client-side requests
+- Treat these keys like passwords - keep them secure and private
+
+### Step 6: Create Test Users
+
+#### 6.1 Create Users in Supabase Auth
+
+1. Go to Supabase dashboard → **Authentication** → **Users**
+2. Click **Add User** or **Invite User**
+3. Enter an email and password for your test user
+4. Click **Send Invite** or **Create User**
+5. Create at least 2 users with different roles:
+   - One for testing as an `editor`
+   - One for testing as an `admin`
+
+#### 6.2 Assign Roles to Users
+
+1. Go to Supabase dashboard → **SQL Editor**
+2. Create a new query and run the following SQL for each user:
+
+For an admin user (replace `user-uuid-here` with the actual user ID):
+```sql
+UPDATE profiles 
+SET role = 'admin' 
+WHERE id = 'user-uuid-here';
+```
+
+For an editor user:
+```sql
+UPDATE profiles 
+SET role = 'editor' 
+WHERE id = 'user-uuid-here';
+```
+
+For a reviewer user:
+```sql
+UPDATE profiles 
+SET role = 'reviewer' 
+WHERE id = 'user-uuid-here';
+```
+
+**To find a user's UUID:**
+1. Go to **Authentication** → **Users**
+2. Click on the user to view details
+3. Copy the **User UID** value
+
+### Step 7: Start the Development Server
 
 ```bash
 npm run dev
 ```
 
-Open:
+You should see output similar to:
+```
+  ▲ Next.js 16.2.6
+  - Local:        http://localhost:3000
+  - Environments: .env.local
 
-```text
-http://localhost:3000
+✓ Ready in 2.3s
 ```
 
-### 7. Production build check
+### Step 8: Access the Application
 
-```bash
-npm run build
-```
+1. Open your web browser and navigate to: **http://localhost:3000**
+2. You will be redirected to the authentication page
+3. Sign in with one of your test user credentials
+4. Upon successful login, you'll be taken to the dashboard
+5. Start creating and managing knowledge articles!
 
-### 8. Lint check
+### Troubleshooting Common Issues
 
-```bash
-npm run lint
-```
+| Issue | Solution |
+|-------|----------|
+| **"Error: Missing required environment variables"** | Verify all required keys in `.env.local` are filled correctly. Check for typos in variable names. |
+| **"Supabase connection failed"** | Ensure `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are correct. Check your Supabase project is active. |
+| **"Authentication/login fails"** | Ensure test users exist in Supabase Authentication. Verify the `profiles` table has entries for each user with their UUID and role. |
+| **"File upload fails or storage bucket error"** | Confirm the `uploads` bucket exists in Supabase Storage. Check bucket access permissions are set correctly. |
+| **"AI generation not working"** | Verify `GEMINI_API_KEY` is valid and has active quota. Check Google Cloud API console for usage limits. |
+| **"Port 3000 already in use"** | Run on a different port: `npm run dev -- -p 3001` |
+| **"Module not found errors"** | Delete `node_modules` folder and `.next` folder, then run `npm install` again. |
+| **"TypeScript errors during build"** | Run `npm run build` to check for compilation errors. Review the error messages and fix type issues. |
+
+### Additional Commands
+
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Start development server at http://localhost:3000 |
+| `npm run build` | Create optimized production build |
+| `npm run start` | Start production server (requires `npm run build` first) |
+| `npm run lint` | Run ESLint to check code quality |
+
+### Verify Your Setup
+
+After completing all steps, test the following to ensure proper installation:
+
+✓ Application loads at http://localhost:3000  
+✓ Login page appears and accepts your test credentials  
+✓ Dashboard loads after successful login  
+✓ You can navigate to the upload/article creation page  
+✓ Text upload creates a draft article successfully  
+✓ Article list displays with search/filter functionality  
+✓ Admin user can change article status  
+✓ Run `npm run build` completes without errors  
+✓ Run `npm run lint` passes without errors  
+
+Congratulations! Your local development environment is now set up and ready to use.
 
 ## Security Features
 
