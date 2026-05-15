@@ -1,10 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/lib/supabase/client";
 import { Bot, LayoutDashboard, Upload, FileText } from "lucide-react";
 
 const links = [
@@ -19,30 +17,12 @@ const links = [
   { href: "/dashboard/articles", label: "Articles", icon: FileText },
 ];
 
-export function NavLinks() {
+interface NavLinksProps {
+  role: string | null;
+}
+
+export function NavLinks({ role }: NavLinksProps) {
   const pathname = usePathname();
-  const supabase = useMemo(() => createClient(), []);
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function loadRole() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      setRole(profile?.role ?? null);
-    }
-
-    void loadRole();
-  }, [supabase]);
 
   const visibleLinks = links.filter((link) => {
     if (link.adminOnly && role !== "admin") return false;

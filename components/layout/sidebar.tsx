@@ -1,6 +1,10 @@
-import { NavLinks } from "./nav-links";
+﻿import { NavLinks } from "./nav-links";
 
-export function Sidebar() {
+interface SidebarProps {
+  role: string | null;
+}
+
+export function Sidebar({ role }: SidebarProps) {
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r bg-card">
       <div className="flex h-16 items-center border-b px-6">
@@ -15,7 +19,7 @@ export function Sidebar() {
         </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4">
-        <NavLinks />
+        <NavLinks role={role} />
       </div>
       <div className="border-t p-4">
         <p className="text-[10px] text-muted-foreground text-center">
