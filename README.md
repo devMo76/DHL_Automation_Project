@@ -1,5 +1,9 @@
 # DHL Knowledge Base Automation System
 
+[![CI](https://github.com/devMo76/DHL_Automation_Project/actions/workflows/ci.yml/badge.svg)](https://github.com/devMo76/DHL_Automation_Project/actions/workflows/ci.yml)
+
+**Live demo:** _Add the deployed application URL here._
+
 ## Project Overview
 
 The DHL Knowledge Base Automation System is a web application for converting raw logistics information into structured knowledge base articles. It supports authenticated users, document/text upload, article editing, status management, version history, and an administrative view for RPA extraction results.
@@ -35,7 +39,30 @@ The project was built for a university Web Technology assignment using Next.js, 
 | Validation | Zod |
 | File Parsing | `pdf-parse`, `mammoth`, `tesseract.js` |
 | AI Support | Gemini API, optional OpenAI API fallback |
-| Tooling | ESLint, npm |
+| Tooling | ESLint, Vitest, npm, GitHub Actions |
+
+## Screenshots
+
+### Dashboard
+
+![Dashboard](docs/screenshots/01.png)
+
+### Article management
+
+![Article management](docs/screenshots/02.png)
+
+### RPA results
+
+![RPA results](docs/screenshots/03.png)
+
+The image paths above are placeholders for project screenshots. Add the corresponding PNG files under `docs/screenshots/` before publishing the documentation.
+
+## Architecture Overview
+
+- **Authentication:** Supabase Auth manages user sessions. Server components and API routes resolve the current user through the Supabase SSR client before accessing protected features.
+- **Authorization and RLS:** Application routes enforce role checks for sensitive actions, while PostgreSQL Row Level Security provides the database boundary. Articles are shared with authenticated users; mutations are limited to article owners or administrators, and RPA records are administrator-only.
+- **UiPath RPA flow:** UiPath extracts external document content into `rpa_extracted_documents`. Administrators review those records in the RPA results page, request AI summaries, and can remove obsolete records.
+- **AI summarisation:** Uploaded knowledge content uses the configured AI processor with a deterministic fallback. The RPA summarisation endpoint uses Gemini and writes the generated summary back to the RPA record.
 
 ## System Roles
 
@@ -370,21 +397,16 @@ GET /api/articles?status=draft&search=parcel&tag=warehouse&from=2026-05-01&to=20
 
 Use `.env.example` as the template for local configuration. Create a `.env.local` file in the project root and fill in your own values.
 
-Required keys:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-GEMINI_API_KEY=your_gemini_api_key
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-Optional key:
-
-```env
-OPENAI_API_KEY=your_openai_api_key
-```
+| Variable | Required | Scope | Purpose |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Public | Supabase project URL used by browser and server clients. |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Public | Supabase anonymous key; effective access remains constrained by RLS. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes for RPA administration | Server only | Privileged Supabase access for protected RPA operations. |
+| `GEMINI_API_KEY` | Yes for RPA summaries | Server only | Generates summaries for extracted RPA documents. |
+| `OPENAI_API_KEY` | Optional | Server only | Enables the OpenAI article-drafting processor; deterministic fallback logic is used when absent. |
+| `NEXT_PUBLIC_APP_URL` | Yes | Public | Canonical application URL, normally `http://localhost:3000` during development. |
+| `TESSERACT_LANG_PATH` | Optional | Server only | Overrides the OCR language-data location used for image extraction. |
+| `NODE_ENV` | Framework managed | Server and build | Controls production-only safeguards such as disabling the seed endpoint. |
 
 Notes:
 
@@ -397,7 +419,7 @@ Notes:
 ### 1. Install dependencies
 
 ```bash
-npm install
+npm ci
 ```
 
 ### 2. Configure environment variables
@@ -410,7 +432,9 @@ Copy `.env.example` to `.env.local` and replace placeholder values with your own
 2. Open the Supabase SQL Editor.
 3. Run `supabase/schema.sql`.
 4. Run `supabase/policies.sql`.
-5. Optionally run `supabase/seed.sql` for demo data.
+5. Run `supabase/seed.sql` for demo data.
+
+Apply these scripts in exactly that order. The seed script assumes the schema and RLS policies already exist.
 
 ### 4. Create the storage bucket
 
@@ -448,6 +472,12 @@ npm run build
 
 ```bash
 npm run lint
+```
+
+### 9. Unit tests
+
+```bash
+npm test
 ```
 
 ## Security Features
