@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+
+const articleIdSchema = z.string().uuid();
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = await params;
+    const { id: rawId } = await params;
+    const idResult = articleIdSchema.safeParse(rawId);
+    if (!idResult.success) {
+      return NextResponse.json({ error: "Invalid article id" }, { status: 400 });
+    }
+    const id = idResult.data;
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
