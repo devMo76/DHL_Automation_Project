@@ -38,7 +38,18 @@ CREATE POLICY "Authenticated users can view source documents"
 ON source_documents
 FOR SELECT
 TO authenticated
-USING (true);
+USING (
+  auth.uid() = uploaded_by
+  OR EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.source_document_id = source_documents.id
+  )
+  OR EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
 
 CREATE POLICY "Authenticated users can insert source documents"
 ON source_documents
@@ -66,13 +77,25 @@ CREATE POLICY "Article creators can update their own articles"
 ON knowledge_articles
 FOR UPDATE
 TO authenticated
-USING (auth.uid() = creator_id)
-WITH CHECK (auth.uid() = creator_id);
+USING (auth.uid() = creator_id AND status = 'draft')
+WITH CHECK (auth.uid() = creator_id AND status = 'draft');
 
 -- Optional admin policy
 CREATE POLICY "Admins can update all articles"
 ON knowledge_articles
 FOR UPDATE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can delete articles"
+ON knowledge_articles
+FOR DELETE
 TO authenticated
 USING (
   EXISTS (
@@ -96,14 +119,72 @@ CREATE POLICY "Authenticated users can insert article steps"
 ON article_steps
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_steps.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
 
 CREATE POLICY "Authenticated users can update article steps"
 ON article_steps
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_steps.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_steps.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
+
+CREATE POLICY "Article owners and admins can delete article steps"
+ON article_steps
+FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_steps.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
 
 -- =========================================================
 -- ARTICLE TAGS
@@ -119,14 +200,72 @@ CREATE POLICY "Authenticated users can insert article tags"
 ON article_tags
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_tags.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
 
 CREATE POLICY "Authenticated users can update article tags"
 ON article_tags
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_tags.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+)
+WITH CHECK (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_tags.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
+
+CREATE POLICY "Article owners and admins can delete article tags"
+ON article_tags
+FOR DELETE
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_tags.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
 
 -- =========================================================
 -- ARTICLE VERSIONS
@@ -142,7 +281,21 @@ CREATE POLICY "Authenticated users can insert article versions"
 ON article_versions
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (
+  edited_by = auth.uid()
+  AND EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = article_versions.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
 
 -- =========================================================
 -- STATUS HISTORY
@@ -158,7 +311,21 @@ CREATE POLICY "Authenticated users can insert status history"
 ON status_history
 FOR INSERT
 TO authenticated
-WITH CHECK (auth.uid() = changed_by);
+WITH CHECK (
+  auth.uid() = changed_by
+  AND EXISTS (
+    SELECT 1 FROM knowledge_articles
+    WHERE knowledge_articles.id = status_history.article_id
+    AND (
+      knowledge_articles.creator_id = auth.uid()
+      OR EXISTS (
+        SELECT 1 FROM profiles
+        WHERE profiles.id = auth.uid()
+        AND profiles.role = 'admin'
+      )
+    )
+  )
+);
 
 -- =========================================================
 -- PROCESSING LOGS
@@ -168,7 +335,13 @@ CREATE POLICY "Authenticated users can view processing logs"
 ON processing_logs
 FOR SELECT
 TO authenticated
-USING (true);
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
 
 CREATE POLICY "Authenticated users can insert processing logs"
 ON processing_logs
